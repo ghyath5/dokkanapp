@@ -66,7 +66,7 @@ const ProductBox: React.FC<Props> = ({product}) => {
         <Text style={{fontWeight: '600', color: 'black'}}>
           ${product.price} د.أ
         </Text>
-        <Text style={{color: '#ccc', paddingBottom: 5}}>
+        <Text style={{color: '#ccc', paddingBottom: 20}} numberOfLines={1}>
           {product.description}
         </Text>
         <View
@@ -101,11 +101,21 @@ const ProductBox: React.FC<Props> = ({product}) => {
           </TouchableOpacity>
         </View>
         {!quantity && (
-          <MaterialCommunityIcon.Button
-            onPress={handleAddToCart}
-            name={quantity < 1 ? 'cart-plus' : 'cart-outline'}
-            backgroundColor="#007bff"
-            style={{justifyContent: 'center'}}></MaterialCommunityIcon.Button>
+          <View
+            style={{
+              width: '70%',
+              alignSelf: 'center',
+            }}>
+            <MaterialCommunityIcon.Button
+              onPress={handleAddToCart}
+              name={quantity < 1 ? 'cart-plus' : 'cart-outline'}
+              backgroundColor="#007bff"
+              style={{
+                justifyContent: 'center',
+                padding: 5,
+              }}
+            />
+          </View>
         )}
       </View>
     </View>

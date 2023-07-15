@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import ProductBox from '../components/Product';
 import {supabase} from '../supabase';
-
 export interface Product {
   id: number;
   title: string;
@@ -28,6 +27,8 @@ const HomeScreen: React.FC = () => {
 
   useEffect(() => {
     const fetch = () => {
+      console.log(page);
+
       getProducts(page).then(loadedProducts =>
         setProducts(products => [...products, ...loadedProducts]),
       );
@@ -47,7 +48,6 @@ const HomeScreen: React.FC = () => {
       .select('*')
       .eq('active', true)
       .range(page * productsPerPage, productsPerPage);
-    console.log('data', data);
     setLoading(false);
 
     return data ?? [];
