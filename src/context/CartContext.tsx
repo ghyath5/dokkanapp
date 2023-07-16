@@ -1,6 +1,6 @@
 import React, {createContext, useContext, useState, useMemo} from 'react';
 import {Text, TouchableOpacity} from 'react-native';
-import {Props} from '../types';
+import {Product, Props} from '../types';
 import {useAuth} from './AuthContext';
 import {supabase} from '../supabase';
 
@@ -16,6 +16,7 @@ export interface CartContextType {
   addToCart: (item: CartItem) => void;
   removeFromCart: (productId: number) => void;
   clearCart: () => void;
+  quantityAction: (item: Product, action: 'INCREASE' | 'DECREASE') => void;
 }
 
 export const CartContext = createContext<CartContextType>({
@@ -23,6 +24,7 @@ export const CartContext = createContext<CartContextType>({
   addToCart: () => {},
   removeFromCart: () => {},
   clearCart: () => {},
+  quantityAction: () => {},
 });
 
 // Define props interface for the AppProvider component
@@ -45,7 +47,17 @@ export const CartProvider: React.FC<Props> = ({children}) => {
       setCartItems(updatedItems);
     }
   };
-
+  const quantityAction = (item: Product, action: 'INCREASE' | 'DECREASE') => {
+    const index = cartItems.findIndex(cartItem => cartItem.id === item.id);
+    if (index === -1 && action == 'INCREASE') {
+      setCartItems(items => [...items, {...item, quantity: 1}]);
+      return;
+    }
+    const updatedItems = [...cartItems];
+    const existingItem = updatedItems[index];
+    action == 'DECREASE' ? existingItem.quantity-- : existingItem.quantity++;
+    setCartItems(updatedItems);
+  };
   const removeFromCart = (productId: number) => {
     setCartItems(items => items.filter(item => item.id !== productId));
   };
@@ -53,6 +65,7 @@ export const CartProvider: React.FC<Props> = ({children}) => {
   const clearCart = () => {
     setCartItems([]);
   };
+
   //   const submitOrder = async () => {
   //     const {error} = await supabase
   //       .from('orders')
@@ -63,7 +76,13 @@ export const CartProvider: React.FC<Props> = ({children}) => {
   //   }
   return (
     <CartContext.Provider
-      value={{cartItems, addToCart, removeFromCart, clearCart}}>
+      value={{
+        cartItems,
+        addToCart,
+        removeFromCart,
+        clearCart,
+        quantityAction,
+      }}>
       {children}
       <FloatingCartButton />
     </CartContext.Provider>
@@ -95,8 +114,8 @@ const FloatingCartButton = () => {
       style={{
         backgroundColor: 'green',
         position: 'absolute',
-        top: 120,
-        right: 20,
+        bottom: 50,
+        left: 18,
         borderRadius: 25,
         width: 50,
         height: 50,

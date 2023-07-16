@@ -1,59 +1,83 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   View,
   Text,
   ActivityIndicator,
-  ScrollView,
+  Dimensions,
   TextInput,
   StyleSheet,
+  FlatList,
+  Alert,
 } from 'react-native';
 import ProductBox from '../components/Product';
 import {supabase} from '../supabase';
-export interface Product {
-  id: number;
-  title: string;
-  unit: string;
-  price: number;
-  images: string[];
-  description: string;
-}
+import {globalStyles} from '../GlobalStyes';
+import debounce from 'lodash/debounce';
+import {uniqBy} from 'lodash';
+import {TouchableWithoutFeedback} from 'react-native-gesture-handler';
+import {Product} from '../types';
+import {ProductsProps} from '../navigation/AuthStack';
 
-const productsPerPage = 8; // Number of products to show per page
-const HomeScreen: React.FC = () => {
+const PAGE_SIZE = 8;
+const HomeScreen: React.FC<ProductsProps> = props => {
+  const {width} = Dimensions.get('screen');
   const [page, setPage] = useState<number>(0);
+  const [productsCount, setProductsCount] = useState<number>(0);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchText, setSearchText] = useState<string>('');
 
-  useEffect(() => {
-    const fetch = () => {
-      console.log(page);
-
-      getProducts(page).then(loadedProducts =>
-        setProducts(products => [...products, ...loadedProducts]),
-      );
-    };
-    fetch();
-  }, [page]);
-
-  const loadMoreProducts = (): void => {
-    setPage(page + 1);
-  };
-
-  const getProducts = async (page: number): Promise<Product[]> => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const hasNext = useMemo(
+    () => productsCount < products.length,
+    [products.length, productsCount],
+  );
+  const getProducts = async ({loadMore = false, text = ''}): Promise<void> => {
     setLoading(true);
     // Simulate loading products from an API
-    const {data} = await supabase
-      .from('products')
-      .select('*')
-      .eq('active', true)
-      .range(page * productsPerPage, productsPerPage);
+    const [productsResponse, {count}] = await Promise.all([
+      supabase
+        .from('products')
+        .select('*')
+        .eq('active', true)
+        .or(`title.ilike.${text}%,description.ilike.${text}%`)
+        .range(page * PAGE_SIZE, PAGE_SIZE),
+      supabase
+        .from('products')
+        .select('*', {count: 'exact', head: true})
+        .eq('active', true)
+        .or(`title.ilike.${text}%,description.ilike.${text}%`),
+    ]);
     setLoading(false);
-
-    return data ?? [];
+    setIsRefreshing(false);
+    if (loadMore) {
+      setProducts(products =>
+        uniqBy([...products, ...(productsResponse.data ?? [])], 'id'),
+      );
+    } else {
+      setProducts(
+        uniqBy([...(productsResponse.data ?? [])], function (e) {
+          return e.id;
+        }),
+      );
+    }
+    setProductsCount(count ?? 0);
   };
+  const debouncedGetProducts = useCallback(debounce(getProducts, 500), [page]);
+  useEffect(() => {
+    debouncedGetProducts({text: searchText});
+  }, [searchText]);
+
+  const handleRefresh = () => {
+    setLoading(true);
+    debouncedGetProducts({text: searchText});
+    setPage(0);
+    setProducts([]);
+  };
+  const keyExtractor = (item: Product) => String(item.id);
+
   return (
-    <View style={{flex: 1}}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <TextInput
           style={styles.searchInput}
@@ -63,43 +87,93 @@ const HomeScreen: React.FC = () => {
           onChangeText={text => setSearchText(text)}
         />
       </View>
-      <ScrollView
-        onScroll={({nativeEvent}) => {
-          if (
-            Number(nativeEvent.contentOffset.y.toFixed(2)) >=
-              Number(
-                (
-                  nativeEvent.contentSize.height -
-                  nativeEvent.layoutMeasurement.height
-                ).toFixed(2),
-              ) &&
-            !loading
-          ) {
-            loadMoreProducts();
+
+      <FlatList
+        numColumns={Math.floor(width / 150)}
+        data={products}
+        renderItem={({item}) => (
+          // <View style={{flex: 1}}>
+          <ProductBox {...props} product={item} />
+          // </View>
+          // </View>
+        )}
+        keyExtractor={keyExtractor}
+        contentContainerStyle={styles.contentContainer}
+        onEndReached={() => {
+          if (!loading && products.length && hasNext) {
+            // console.log('loainggg');
+            debouncedGetProducts({text: searchText, loadMore: true});
           }
         }}
-        // style={{flex: 1}}
-        contentContainerStyle={{padding: 10}}>
-        {products.map((product, index) => {
-          if (index % 2 === 0) {
-            return (
-              <View key={index} style={{flexDirection: 'row'}}>
-                <ProductBox product={product} />
-                {products[index + 1] && (
-                  <ProductBox product={products[index + 1]} />
-                )}
-              </View>
-            );
-          }
-        })}
-        {loading && <ActivityIndicator size="large" color="blue" />}
-      </ScrollView>
+        // onStartReachedThreshold={0}
+        onEndReachedThreshold={0.3}
+        refreshing={isRefreshing}
+        onRefresh={handleRefresh}
+        ListFooterComponent={
+          loading ? <ActivityIndicator size="large" color="blue" /> : <></>
+        }
+        ListEmptyComponent={
+          !loading && products.length === 0 ? (
+            <Text style={{...globalStyles.centerText}}>No products found.</Text>
+          ) : (
+            <></>
+          )
+        }
+      />
+      {/* </View> */}
     </View>
   );
 };
 
 export default HomeScreen;
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: 5,
+    // paddingTop: 24,
+  },
+  contentContainer: {
+    paddingBottom: 16,
+  },
+  productContainer: {
+    width: '48%',
+    marginBottom: 16,
+  },
+  productBox: {
+    backgroundColor: '#F8F8F8',
+    borderRadius: 8,
+    padding: 16,
+  },
+  image: {
+    width: '100%',
+    height: 150,
+    marginBottom: 8,
+    borderRadius: 8,
+  },
+  productDetails: {
+    flex: 1,
+  },
+  name: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'right',
+    marginBottom: 8,
+  },
+  unit: {
+    fontSize: 14,
+    textAlign: 'right',
+    marginBottom: 4,
+  },
+  price: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'right',
+    marginBottom: 4,
+  },
+  description: {
+    fontSize: 14,
+    textAlign: 'right',
+  },
   header: {
     padding: 10,
     backgroundColor: '#ffffff00',

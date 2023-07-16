@@ -26,7 +26,7 @@ const AppNavigator = () => {
                       options={{headerShown: false}}>
                       {props => (
                         <CartProvider>
-                          <AuthStack {...props} />
+                          <AuthStack />
                         </CartProvider>
                       )}
                     </Stack.Screen>

@@ -1,124 +1,95 @@
-import React, {useState, useEffect} from 'react';
-import {View, Text, Image, TouchableOpacity} from 'react-native';
-import {Product} from '../screens/HomeScreen';
+import React, {useState, useEffect, useMemo} from 'react';
+import {View, Text, Image, TouchableWithoutFeedback} from 'react-native';
 import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIcons';
-import FeatherIcon from 'react-native-vector-icons/Feather';
 import {useCart} from '../context/CartContext';
+import {Product} from '../types';
+import {GENERATE_IMAGE_URL, baseURL} from '../Constant';
+import QuantityCounter from './QuantityCounter';
+import {ProductsProps} from '../navigation/AuthStack';
 interface Props {
   product: Product;
 }
-const baseURL =
-  'https://crkrfubycchydiwccztq.supabase.co/storage/v1/object/public';
-const ProductBox: React.FC<Props> = ({product}) => {
-  const [quantity, setQuantity] = useState<number>(0);
-  const {addToCart, removeFromCart} = useCart();
-
-  const handleAddToCart = () => {
-    // Code to add the product to the cart with the selected quantity
-    if (quantity >= 1) {
-      addToCart({...product, quantity});
-    } else {
-      setQuantity(1);
-    }
-    console.log(`Added ${quantity} ${product.title} to cart.`);
-  };
-  useEffect(() => {
-    if (quantity >= 1) {
-      addToCart({...product, quantity});
-    } else {
-      removeFromCart(product.id);
-    }
-  }, [quantity]);
-
+const ProductBox: React.FC<Props & ProductsProps> = ({product, navigation}) => {
+  const {addToCart, removeFromCart, cartItems, quantityAction} = useCart();
+  const cartProduct = useMemo(
+    () => cartItems.find(cartProduct => cartProduct.id == product.id),
+    [product.id, cartItems],
+  );
+  const quantity = useMemo(
+    () => cartProduct?.quantity || 0,
+    [cartProduct?.quantity],
+  );
+  const picURL = GENERATE_IMAGE_URL(product.images[0]);
   return (
-    <View
-      style={{
-        flex: 1,
-        margin: 5,
-        borderTopLeftRadius: 18,
-        borderTopRightRadius: 18,
-        overflow: 'hidden',
+    <TouchableWithoutFeedback
+      onPress={() => {
+        navigation.navigate('Product', {product});
       }}>
-      <Image
-        source={{uri: `${baseURL}/${product.images[0]}`}}
-        style={{width: '100%', height: 200}}
-        resizeMethod="resize"
-      />
       <View
+        onStartShouldSetResponder={event => true}
         style={{
-          backgroundColor: 'white',
-          padding: 10,
-          borderBottomEndRadius: 10,
-          borderBottomStartRadius: 10,
+          flex: 1,
+          margin: 5,
+          // width: '100%',
+          borderTopLeftRadius: 18,
+          borderTopRightRadius: 18,
+          overflow: 'hidden',
         }}>
+        <Image
+          source={{uri: picURL}}
+          style={{width: '100%', height: 200}}
+          resizeMethod="resize"
+        />
         <View
           style={{
-            flex: 1,
-            justifyContent: 'space-between',
-            flexDirection: 'row',
+            backgroundColor: 'white',
+            padding: 10,
+            borderBottomEndRadius: 10,
+            borderBottomStartRadius: 10,
           }}>
-          <Text style={{fontSize: 15, fontWeight: 'bold', color: 'green'}}>
-            {product.title}
-          </Text>
-
-          <Text style={{fontSize: 12, color: 'gray'}}>{product.unit}</Text>
-        </View>
-        <Text style={{fontWeight: '600', color: 'black'}}>
-          ${product.price} د.أ
-        </Text>
-        <Text style={{color: '#ccc', paddingBottom: 20}} numberOfLines={1}>
-          {product.description}
-        </Text>
-        <View
-          style={{
-            display: quantity <= 0 ? 'none' : 'flex',
-            flexDirection: 'row',
-            justifyContent: 'space-around',
-          }}>
-          <TouchableOpacity
-            style={{padding: 5}}
-            onPress={() => {
-              setQuantity(quantity + 1);
-            }}>
-            <FeatherIcon color={'black'} size={20} name="plus-circle" />
-          </TouchableOpacity>
-          <Text
-            style={{
-              color: 'black',
-              paddingHorizontal: 10,
-              fontSize: 16,
-              fontWeight: 'bold',
-            }}>
-            {quantity}
-          </Text>
-          <TouchableOpacity
-            style={{padding: 5}}
-            onPress={() => {
-              setQuantity(quantity - 1);
-            }}
-            disabled={quantity === 0}>
-            <FeatherIcon color={'black'} size={20} name="minus-circle" />
-          </TouchableOpacity>
-        </View>
-        {!quantity && (
           <View
             style={{
-              width: '70%',
-              alignSelf: 'center',
+              flex: 1,
+              justifyContent: 'space-between',
+              flexDirection: 'row',
             }}>
-            <MaterialCommunityIcon.Button
-              onPress={handleAddToCart}
-              name={quantity < 1 ? 'cart-plus' : 'cart-outline'}
-              backgroundColor="#007bff"
-              style={{
-                justifyContent: 'center',
-                padding: 5,
-              }}
-            />
+            <Text style={{fontSize: 15, fontWeight: 'bold', color: 'green'}}>
+              {product.title}
+            </Text>
+
+            <Text style={{fontSize: 12, color: 'gray'}}>{product.unit}</Text>
           </View>
-        )}
+          <Text style={{fontWeight: '600', color: 'black'}}>
+            ${product.price} د.أ
+          </Text>
+          <Text style={{color: '#ccc', paddingBottom: 20}} numberOfLines={1}>
+            {product.description}
+          </Text>
+          <QuantityCounter
+            decrease={e => quantityAction(product, 'DECREASE')}
+            increase={e => quantityAction(product, 'INCREASE')}
+            quantity={quantity}
+          />
+          {!quantity && (
+            <View
+              style={{
+                width: '70%',
+                alignSelf: 'center',
+              }}>
+              <MaterialCommunityIcon.Button
+                onPress={e => quantityAction(product, 'INCREASE')}
+                name={quantity < 1 ? 'cart-plus' : 'cart-outline'}
+                backgroundColor="#007bff"
+                style={{
+                  justifyContent: 'center',
+                  padding: 5,
+                }}
+              />
+            </View>
+          )}
+        </View>
       </View>
-    </View>
+    </TouchableWithoutFeedback>
   );
 };
 
