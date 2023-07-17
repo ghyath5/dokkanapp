@@ -6,13 +6,14 @@ import {
   Text,
   StyleSheet,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import {useAuth} from '../context/AuthContext';
 import FontAwesomeIcon from 'react-native-vector-icons/FontAwesome';
 const LoginScreen: React.FC = () => {
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
-  const {signIn} = useAuth();
+  const {signIn, loading} = useAuth();
   const handleLogin = () => {
     signIn(username, password);
   };
@@ -42,7 +43,11 @@ const LoginScreen: React.FC = () => {
           autoCorrect={false}
         />
         <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.buttonText}>دخول</Text>
+          {loading ? (
+            <ActivityIndicator color={'white'} size={20} />
+          ) : (
+            <Text style={styles.buttonText}>دخول</Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>

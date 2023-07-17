@@ -25,8 +25,8 @@ const AppNavigator = () => {
                       name="AuthStack"
                       options={{headerShown: false}}>
                       {props => (
-                        <CartProvider>
-                          <AuthStack />
+                        <CartProvider {...props}>
+                          <AuthStack {...props} />
                         </CartProvider>
                       )}
                     </Stack.Screen>

@@ -1,6 +1,5 @@
-import React, {useState, useEffect, useMemo} from 'react';
+import React, {useState, useEffect, useMemo, memo} from 'react';
 import {View, Text, Image, TouchableWithoutFeedback} from 'react-native';
-import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useCart} from '../context/CartContext';
 import {Product} from '../types';
 import {GENERATE_IMAGE_URL, baseURL} from '../Constant';
@@ -70,27 +69,10 @@ const ProductBox: React.FC<Props & ProductsProps> = ({product, navigation}) => {
             increase={e => quantityAction(product, 'INCREASE')}
             quantity={quantity}
           />
-          {!quantity && (
-            <View
-              style={{
-                width: '70%',
-                alignSelf: 'center',
-              }}>
-              <MaterialCommunityIcon.Button
-                onPress={e => quantityAction(product, 'INCREASE')}
-                name={quantity < 1 ? 'cart-plus' : 'cart-outline'}
-                backgroundColor="#007bff"
-                style={{
-                  justifyContent: 'center',
-                  padding: 5,
-                }}
-              />
-            </View>
-          )}
         </View>
       </View>
     </TouchableWithoutFeedback>
   );
 };
 
-export default ProductBox;
+export default memo(ProductBox);

@@ -18,3 +18,10 @@ interface Product {
   images: string[];
   description: string;
 }
+
+interface Profile {
+  id: number;
+  username: string;
+  name: string;
+  address: string;
+}

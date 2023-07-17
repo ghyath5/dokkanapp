@@ -1,57 +1,61 @@
 import React, {useEffect, useMemo} from 'react';
-import {View, Text, StyleSheet, Image, ScrollView} from 'react-native';
+import {View, Text, StyleSheet, Image, ScrollView, Button} from 'react-native';
 import {ProductProps} from '../navigation/AuthStack';
-import {GENERATE_IMAGE_URL, baseURL} from '../Constant';
+import {GENERATE_IMAGE_URL} from '../Constant';
 import {useCart} from '../context/CartContext';
-import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import QuantityCounter from '../components/QuantityCounter';
+import {globalStyles} from '../GlobalStyes';
 
 const ProductScreen: React.FC<ProductProps> = ({navigation, route}) => {
   const {product} = route.params;
   const productId = product.id;
-  const {cartItems, addToCart, quantityAction} = useCart();
+  const {cartItems, quantityAction} = useCart();
 
   const oneProductState = useMemo(
     () => cartItems.find(item => item.id == productId),
-    [productId],
+    [productId, cartItems],
   );
+  const quantity = useMemo(
+    () => oneProductState?.quantity || 0,
+    [productId, oneProductState?.quantity],
+  );
+
   useEffect(() => {
     navigation.setOptions({title: product.title});
-  });
+  }, []);
   return (
     <ScrollView contentContainerStyle={styles.container} horizontal={false}>
       <ScrollView horizontal={true}>
         <View style={styles.imagesContainer}>
           {product.images.map((image, index) => (
             <Image
-              key={index}
+              key={image}
               source={{uri: GENERATE_IMAGE_URL(image)}}
               style={styles.image}
             />
           ))}
         </View>
       </ScrollView>
-      <View style={{alignItems: 'flex-start'}}>
+      <View
+        style={{
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexDirection: 'row',
+        }}>
         <Text style={styles.title}>{product.title}</Text>
         <Text style={styles.unit}>{product.unit}</Text>
-        <Text style={{...styles.price}}>${product.price}</Text>
-        <Text style={styles.description}>{product.description}</Text>
       </View>
-      <View>
+      <Text style={{...styles.price}}>${product.price}</Text>
+      <Text style={{...styles.description, ...globalStyles.centerText}}>
+        {product.description}
+      </Text>
+      <View style={{marginTop: 40}}>
         <QuantityCounter
+          iconSize={35}
           decrease={() => quantityAction(product, 'DECREASE')}
           increase={() => quantityAction(product, 'INCREASE')}
-          quantity={oneProductState?.quantity || 0}
+          quantity={quantity}
         />
-        {/* <MaterialCommunityIcon.Button
-          onPress={(handleAddToCart)}
-          name={quantity < 1 ? 'cart-plus' : 'cart-outline'}
-          backgroundColor="#007bff"
-          style={{
-            justifyContent: 'center',
-            padding: 5,
-          }}
-        /> */}
       </View>
     </ScrollView>
   );
@@ -75,17 +79,21 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 8,
+    color: 'black',
   },
   unit: {
+    color: 'gray',
     fontSize: 16,
     marginBottom: 8,
   },
   price: {
+    color: 'black',
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   description: {
+    color: 'gray',
     fontSize: 14,
   },
 });

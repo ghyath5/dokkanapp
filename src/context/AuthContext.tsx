@@ -1,14 +1,16 @@
 import {User} from '@supabase/supabase-js';
-import React, {createContext, useState, useContext} from 'react';
-import {Props} from '../types';
+import React, {createContext, useState, useContext, useEffect} from 'react';
+import {Profile, Props} from '../types';
 import {supabase} from '../supabase';
 import {useApp} from './AppContext';
+import {Alert} from 'react-native';
 
 interface AuthContextType {
-  user: User | null;
+  user: Profile | null;
   token: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  loading: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -16,34 +18,47 @@ export const AuthContext = createContext<AuthContextType>({
   token: '',
   signIn: (email: string, password: string): any => {},
   signOut: (): any => {},
+  loading: false,
 });
 
 export const AuthProvider: React.FC<Props> = ({children}) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<Profile | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const {isLoggedIn, setIsLoggedIn} = useApp();
+  const [loading, setLoading] = useState(false);
+  const {checkSession} = useApp();
+  const {setIsLoggedIn} = useApp();
 
   const signIn = async (email: string, password: string) => {
-    console.log(`${email}@gmila.com`);
-
     try {
+      setLoading(true);
       const {data, error} = await supabase.auth.signInWithPassword({
-        email: `${email}@gmial.com`,
+        email: `${email.trim()}@gmial.com`,
         password,
       });
-      console.log(data);
-
-      if (error) {
+      // console.log(data);
+      if (error || !data.session) {
         // Handle error
+        return Alert.alert('فشل تسجيل الدخول، تأكد من المعلومات');
       } else {
         // Update user state
-        setUser(data.user);
+        // This will return nothing while the user is logged out
+        const response = await supabase
+          .from('users')
+          .select('id, name, username, address');
+
+        if (!response.data?.length || response.error) {
+          return Alert.alert('حسابك معطل، راسل المشرف');
+        }
+        setUser(response.data[0]);
         // // Update token state
         setToken(data.session.access_token);
         setIsLoggedIn(true);
       }
     } catch (error) {
+      return Alert.alert('فشل تسجيل الدخول');
       // Handle error
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -53,12 +68,19 @@ export const AuthProvider: React.FC<Props> = ({children}) => {
     // Call Supabase to sign out the user
     // Handle success and error scenarios
   };
+  useEffect(() => {
+    checkSession().then(profile => {
+      if (profile) return setUser(profile);
+      signOut();
+    });
+  }, []);
 
   const authContextValue: AuthContextType = {
     user,
     signIn,
     signOut,
     token,
+    loading,
   };
 
   return (

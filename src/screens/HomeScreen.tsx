@@ -14,9 +14,10 @@ import {supabase} from '../supabase';
 import {globalStyles} from '../GlobalStyes';
 import debounce from 'lodash/debounce';
 import {uniqBy} from 'lodash';
-import {TouchableWithoutFeedback} from 'react-native-gesture-handler';
 import {Product} from '../types';
 import {ProductsProps} from '../navigation/AuthStack';
+import {getPagination} from '../Constant';
+import TheText from '../components/TheText';
 
 const PAGE_SIZE = 8;
 const HomeScreen: React.FC<ProductsProps> = props => {
@@ -24,29 +25,42 @@ const HomeScreen: React.FC<ProductsProps> = props => {
   const [page, setPage] = useState<number>(0);
   const [productsCount, setProductsCount] = useState<number>(0);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [searchText, setSearchText] = useState<string>('');
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const hasNext = useMemo(
-    () => productsCount < products.length,
+    () => productsCount > products.length,
     [products.length, productsCount],
   );
-  const getProducts = async ({loadMore = false, text = ''}): Promise<void> => {
+  const getProducts = async ({
+    loadMore = false,
+    text = '',
+    pageNumber = 0,
+  }): Promise<void> => {
     setLoading(true);
-    // Simulate loading products from an API
-    const [productsResponse, {count}] = await Promise.all([
+
+    const {from, to} = getPagination(pageNumber, PAGE_SIZE);
+
+    // // Simulate loading products from an API
+    // const orValue = text
+    //   ? `title.ilike.${text}%,description.ilike.${text}%,tags.cs.{${text}}`
+    //   : '';
+    const [productsResponse, {count, status}] = await Promise.all([
       supabase
         .from('products')
         .select('*')
         .eq('active', true)
-        .or(`title.ilike.${text}%,description.ilike.${text}%`)
-        .range(page * PAGE_SIZE, PAGE_SIZE),
+        .or(`title.ilike.${text}%,description.ilike.${text}%,tags.cs.{${text}}`)
+        .range(from, to)
+        .order('created_at', {ascending: false}),
       supabase
         .from('products')
         .select('*', {count: 'exact', head: true})
         .eq('active', true)
-        .or(`title.ilike.${text}%,description.ilike.${text}%`),
+        .or(
+          `title.ilike.${text}%,description.ilike.${text}%,tags.cs.{${text}}`,
+        ),
     ]);
     setLoading(false);
     setIsRefreshing(false);
@@ -63,9 +77,10 @@ const HomeScreen: React.FC<ProductsProps> = props => {
     }
     setProductsCount(count ?? 0);
   };
-  const debouncedGetProducts = useCallback(debounce(getProducts, 500), [page]);
+  const debouncedGetProducts = useCallback(debounce(getProducts, 700), []);
   useEffect(() => {
-    debouncedGetProducts({text: searchText});
+    setPage(0);
+    debouncedGetProducts({text: searchText, pageNumber: 0});
   }, [searchText]);
 
   const handleRefresh = () => {
@@ -74,12 +89,16 @@ const HomeScreen: React.FC<ProductsProps> = props => {
     setPage(0);
     setProducts([]);
   };
+  useEffect(() => {
+    debouncedGetProducts({text: searchText, loadMore: true, pageNumber: page});
+  }, [page]);
   const keyExtractor = (item: Product) => String(item.id);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TextInput
+          clearButtonMode="always"
           style={styles.searchInput}
           placeholderTextColor={'grey'}
           placeholder="بحث"
@@ -89,24 +108,23 @@ const HomeScreen: React.FC<ProductsProps> = props => {
       </View>
 
       <FlatList
+        initialNumToRender={8}
         numColumns={Math.floor(width / 150)}
         data={products}
-        renderItem={({item}) => (
-          // <View style={{flex: 1}}>
-          <ProductBox {...props} product={item} />
-          // </View>
-          // </View>
-        )}
+        renderItem={({item}) => <ProductBox {...props} product={item} />}
         keyExtractor={keyExtractor}
         contentContainerStyle={styles.contentContainer}
         onEndReached={() => {
-          if (!loading && products.length && hasNext) {
-            // console.log('loainggg');
-            debouncedGetProducts({text: searchText, loadMore: true});
+          if (
+            !loading &&
+            products.length &&
+            hasNext &&
+            page * PAGE_SIZE <= products.length
+          ) {
+            setPage(page + 1);
           }
         }}
         // onStartReachedThreshold={0}
-        onEndReachedThreshold={0.3}
         refreshing={isRefreshing}
         onRefresh={handleRefresh}
         ListFooterComponent={
@@ -114,7 +132,9 @@ const HomeScreen: React.FC<ProductsProps> = props => {
         }
         ListEmptyComponent={
           !loading && products.length === 0 ? (
-            <Text style={{...globalStyles.centerText}}>No products found.</Text>
+            <TheText style={{...globalStyles.centerText}}>
+              لايوجد منتجات.
+            </TheText>
           ) : (
             <></>
           )
@@ -181,6 +201,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   searchInput: {
+    color: 'black',
     height: 40,
     width: '95%',
     borderColor: '#ccc',
