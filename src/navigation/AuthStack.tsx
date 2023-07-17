@@ -44,7 +44,7 @@ const AuthStack = (props: NativeStackScreenProps<AuthStackParamList>) => {
       drawerStyle={{padding: 10}}
       drawerPosition="right"
       overlayStyle={{backgroundColor: 'transparent'}}
-      // layout={{height, width: width / 2}}
+      layout={{height, width: width / 1.4}}
       open={open}
       onOpen={() => setOpen(true)}
       onClose={() => setOpen(false)}
@@ -111,7 +111,8 @@ const AuthStack = (props: NativeStackScreenProps<AuthStackParamList>) => {
           },
         }}
         screenOptions={{
-          headerRight: () => (
+          headerBackVisible: false,
+          headerLeft: () => (
             <MaterialIcon
               name={open ? 'menu-open' : 'menu'}
               size={28}

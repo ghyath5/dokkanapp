@@ -155,6 +155,9 @@ const CartScreen: React.FC<CartProps> = ({navigation}) => {
         }}>
         <TouchableWithoutFeedback
           onPress={() => {
+            if (!cartItems.length) {
+              return navigation.navigate('Products');
+            }
             Alert.alert(
               'متأكد',
               `هل انت متأكد من ارسال هذا الطلب (${totalPrice}$)`,
