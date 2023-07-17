@@ -15,6 +15,7 @@ import {
   Dimensions,
   StyleSheet,
   TouchableHighlight,
+  Linking,
 } from 'react-native';
 import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import ProductScreen from '../screens/ProductScreen';
@@ -39,11 +40,11 @@ const AuthStack = (props: NativeStackScreenProps<AuthStackParamList>) => {
   const {user} = useAuth();
   return (
     <Drawer
-      drawerType="back"
+      drawerType="slide"
       drawerStyle={{padding: 10}}
       drawerPosition="right"
       overlayStyle={{backgroundColor: 'transparent'}}
-      layout={{height, width: width / 1.5}}
+      // layout={{height, width: width / 2}}
       open={open}
       onOpen={() => setOpen(true)}
       onClose={() => setOpen(false)}
@@ -74,7 +75,27 @@ const AuthStack = (props: NativeStackScreenProps<AuthStackParamList>) => {
                 <TheText style={{color: 'blue'}}>عرض طلباتي</TheText>
               </TouchableHighlight>
             </View>
-            <View>
+            <View style={{justifyContent: 'space-between', height: 120}}>
+              <View
+                style={{
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <TheText style={{fontSize: 16, fontWeight: '600'}}>
+                  تواصل معنا
+                </TheText>
+                <MaterialIcon.Button
+                  underlayColor={'transparent'}
+                  onPress={() => {
+                    Linking.openURL(
+                      `whatsapp://send?text=مرحبا انا المستخدم ${user?.name} وأحتاح المساعدة&phone=+84763815244`,
+                    );
+                  }}
+                  backgroundColor={'transparent'}
+                  name="whatsapp"
+                  size={40}
+                  color={'green'}></MaterialIcon.Button>
+              </View>
               <TheText style={{fontSize: 12, color: 'gray'}}>
                 SuperDar ©{new Date().getFullYear()}
               </TheText>

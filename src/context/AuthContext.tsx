@@ -35,7 +35,6 @@ export const AuthProvider: React.FC<Props> = ({children}) => {
         email: `${email.trim()}@gmial.com`,
         password,
       });
-      // console.log(data);
       if (error || !data.session) {
         // Handle error
         return Alert.alert('فشل تسجيل الدخول، تأكد من المعلومات');
