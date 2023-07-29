@@ -184,7 +184,9 @@ const CartScreen: React.FC<CartProps> = ({navigation}) => {
             اطلب الان
           </Text>
         </TouchableWithoutFeedback>
-        <Text style={styles.totalPrice}>المجموع: {totalPrice}$</Text>
+        <Text style={styles.totalPrice}>
+          المجموع: {(totalPrice ?? 0).toFixed(2)}$
+        </Text>
       </View>
     </View>
   );
